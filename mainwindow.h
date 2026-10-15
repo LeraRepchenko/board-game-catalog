@@ -7,6 +7,7 @@
 #include <QComboBox>
 #include <QTextEdit>
 #include <QPushButton>
+#include <QTimer>
 
 class MainWindow : public QMainWindow
 {
@@ -20,12 +21,14 @@ private slots:
     void onAddGame();
     void onClearForm();
     void onExit();
+    void onAutosave();
 
 private:
     void setupUi();
     void setupMenu();
     void setupToolBar();
     void setupStatusBar();
+    void setupAutosave();
 
     QLineEdit   *m_titleEdit;
     QSpinBox    *m_playersSpin;
@@ -34,6 +37,8 @@ private:
     QTextEdit   *m_descriptionEdit;
     QPushButton *m_addButton;
     QPushButton *m_clearButton;
+
+    QTimer *m_autosaveTimer;
 };
 
 #endif // MAINWINDOW_H
