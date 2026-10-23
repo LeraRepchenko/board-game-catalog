@@ -22,6 +22,9 @@ private slots:
     void onClearForm();
     void onExit();
     void onAutosave();
+    void onSave();
+    void onDelete();
+    void onSettings();
 
 private:
     void setupUi();
@@ -30,11 +33,14 @@ private:
     void setupStatusBar();
     void setupAutosave();
 
+    // Поля формы
     QLineEdit   *m_titleEdit;
     QSpinBox    *m_playersSpin;
     QSpinBox    *m_timeSpin;
     QComboBox   *m_difficultyCombo;
     QTextEdit   *m_descriptionEdit;
+
+    // Кнопки действий
     QPushButton *m_addButton;
     QPushButton *m_clearButton;
 
