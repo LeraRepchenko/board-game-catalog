@@ -9,4 +9,5 @@ SOURCES += \
     mainwindow.cpp
 
 HEADERS += \
+    game.h \
     mainwindow.h

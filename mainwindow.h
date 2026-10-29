@@ -8,6 +8,9 @@
 #include <QTextEdit>
 #include <QPushButton>
 #include <QTimer>
+#include <QListWidget>
+#include <QList>
+#include "game.h"
 
 class MainWindow : public QMainWindow
 {
@@ -19,12 +22,12 @@ public:
 
 private slots:
     void onAddGame();
+    void onDelete();
+    void onSave();
+    void onSettings();
     void onClearForm();
     void onExit();
     void onAutosave();
-    void onSave();
-    void onDelete();
-    void onSettings();
 
 private:
     void setupUi();
@@ -32,15 +35,17 @@ private:
     void setupToolBar();
     void setupStatusBar();
     void setupAutosave();
+    void updateGameList();
 
-    // Поля формы
     QLineEdit   *m_titleEdit;
     QSpinBox    *m_playersSpin;
     QSpinBox    *m_timeSpin;
     QComboBox   *m_difficultyCombo;
     QTextEdit   *m_descriptionEdit;
 
-    // Кнопки действий
+    QListWidget *m_gameList;
+    QList<Game> m_games;
+
     QPushButton *m_addButton;
     QPushButton *m_clearButton;
 
