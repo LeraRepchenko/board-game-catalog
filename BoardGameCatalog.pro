@@ -6,8 +6,10 @@ TEMPLATE = app
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    gamedelegate.cpp
 
 HEADERS += \
-    game.h \
-    mainwindow.h
+    mainwindow.h \
+    gamedelegate.h \
+    game.h

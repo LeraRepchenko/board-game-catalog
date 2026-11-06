@@ -8,8 +8,8 @@
 #include <QTextEdit>
 #include <QPushButton>
 #include <QTimer>
-#include <QListWidget>
-#include <QList>
+#include <QListView>
+#include <QStringListModel>
 #include "game.h"
 
 class MainWindow : public QMainWindow
@@ -37,15 +37,19 @@ private:
     void setupAutosave();
     void updateGameList();
 
+    // Поля формы
     QLineEdit   *m_titleEdit;
     QSpinBox    *m_playersSpin;
     QSpinBox    *m_timeSpin;
     QComboBox   *m_difficultyCombo;
     QTextEdit   *m_descriptionEdit;
 
-    QListWidget *m_gameList;
-    QList<Game> m_games;
+    // Model-View
+    QListView *m_gameList;
+    QStringListModel *m_gameModel;
+    QList<Game> m_games; // Хранилище данных
 
+    // Кнопки
     QPushButton *m_addButton;
     QPushButton *m_clearButton;
 

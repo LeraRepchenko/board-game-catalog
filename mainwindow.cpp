@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "gamedelegate.h"
 
 #include <QApplication>
 #include <QWidget>
@@ -17,7 +18,7 @@
 #include <QTextStream>
 #include <QStringConverter>
 #include <QSizePolicy>
-#include <QListWidget>
+#include <QListView>
 
 inline void logMsg(const QString &msg)
 {
@@ -50,54 +51,77 @@ void MainWindow::setupUi()
     QWidget *central = new QWidget(this);
     setCentralWidget(central);
 
+    // Главный слой
     QVBoxLayout *rootLayout = new QVBoxLayout(central);
     rootLayout->setContentsMargins(16, 16, 16, 16);
 
+    // --- 1. ФОРМА (с адаптивностью ЛР4) ---
     QGroupBox *formGroup = new QGroupBox("Добавить игру", central);
     QFormLayout *formLayout = new QFormLayout(formGroup);
     formLayout->setContentsMargins(8, 8, 8, 8);
+    formLayout->setSpacing(10);
 
+    // Название: тянется вширь
     m_titleEdit = new QLineEdit(formGroup);
     m_titleEdit->setPlaceholderText("Название игры");
     m_titleEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     formLayout->addRow("Название:", m_titleEdit);
 
+    // Игроков: фиксированное, обернуто в пружину
     m_playersSpin = new QSpinBox(formGroup);
     m_playersSpin->setRange(1, 20);
     m_playersSpin->setValue(2);
+    m_playersSpin->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     auto *playersRow = new QHBoxLayout();
     playersRow->addWidget(m_playersSpin);
     playersRow->addStretch();
     formLayout->addRow("Игроков:", playersRow);
 
+    // Время: фиксированное, обернуто в пружину
     m_timeSpin = new QSpinBox(formGroup);
     m_timeSpin->setRange(5, 600);
     m_timeSpin->setValue(60);
     m_timeSpin->setSuffix(" мин");
+    m_timeSpin->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     auto *timeRow = new QHBoxLayout();
     timeRow->addWidget(m_timeSpin);
     timeRow->addStretch();
     formLayout->addRow("Время партии:", timeRow);
 
+    // Сложность: тянется вширь
     m_difficultyCombo = new QComboBox(formGroup);
     m_difficultyCombo->addItems({"Лёгкая", "Средняя", "Сложная"});
+    m_difficultyCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     formLayout->addRow("Сложность:", m_difficultyCombo);
 
+    // Описание: тянется вширь и ввысь (как в ЛР4)
     m_descriptionEdit = new QTextEdit(formGroup);
     m_descriptionEdit->setPlaceholderText("Описание игры...");
-    m_descriptionEdit->setMaximumHeight(80);
+    m_descriptionEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     formLayout->addRow("Описание:", m_descriptionEdit);
 
     rootLayout->addWidget(formGroup);
 
+    // --- 2. СПИСОК (Model-View из ЛР5) ---
     QGroupBox *listGroup = new QGroupBox("Список игр", central);
     QVBoxLayout *listLayout = new QVBoxLayout(listGroup);
-    m_gameList = new QListWidget(listGroup);
+
+    m_gameList = new QListView(listGroup);
+    m_gameModel = new QStringListModel(this);
+    m_gameList->setModel(m_gameModel);
+    m_gameList->setItemDelegate(new GameDelegate(m_gameList));
+
+    // Адаптивность для списка (ЛР4): тянется по обеим осям
+    m_gameList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
     listLayout->addWidget(m_gameList);
+
+    // Список забирает всё свободное место по вертикали (stretch=1)
     rootLayout->addWidget(listGroup, 1);
 
+    // --- 3. КНОПКИ (с пружиной вправо из ЛР4) ---
     QHBoxLayout *btnLayout = new QHBoxLayout();
-    btnLayout->addStretch();
+    btnLayout->addStretch(); // Пружина: прижимает кнопки вправо
 
     m_addButton = new QPushButton("Добавить", central);
     connect(m_addButton, &QPushButton::clicked, this, &MainWindow::onAddGame);
@@ -115,7 +139,7 @@ void MainWindow::setupUi()
     connect(settingsBtn, &QPushButton::clicked, this, &MainWindow::onSettings);
     btnLayout->addWidget(settingsBtn);
 
-    m_clearButton = new QPushButton("Очистить", central);
+    m_clearButton = new QPushButton("Очистить всё", central); // Переименовали для ясности
     connect(m_clearButton, &QPushButton::clicked, this, &MainWindow::onClearForm);
     btnLayout->addWidget(m_clearButton);
 
@@ -128,34 +152,17 @@ void MainWindow::setupMenu()
     QAction *newAction = fileMenu->addAction("&Добавить игру");
     newAction->setShortcut(QKeySequence("Ctrl+N"));
     connect(newAction, &QAction::triggered, this, &MainWindow::onAddGame);
-
-    fileMenu->addSeparator();
-    QAction *saveAction = fileMenu->addAction("&Сохранить");
-    saveAction->setShortcut(QKeySequence("Ctrl+S"));
-    connect(saveAction, &QAction::triggered, this, &MainWindow::onSave);
-
     fileMenu->addSeparator();
     QAction *exitAction = fileMenu->addAction("В&ыход");
-    exitAction->setShortcut(QKeySequence("Ctrl+Q"));
     connect(exitAction, &QAction::triggered, this, &MainWindow::onExit);
-
-    QMenu *helpMenu = menuBar()->addMenu("&Справка");
-    QAction *aboutAction = helpMenu->addAction("&О программе");
-    connect(aboutAction, &QAction::triggered, this, [this]() {
-        QMessageBox::about(this, "О программе", "Каталог настольных игр\nЭтап 2. Model-View.");
-    });
 }
 
 void MainWindow::setupToolBar()
 {
     QToolBar *toolbar = addToolBar("Главная");
     toolbar->setMovable(false);
-    QAction *addAct = toolbar->addAction("Добавить");
-    connect(addAct, &QAction::triggered, this, &MainWindow::onAddGame);
-    QAction *saveAct = toolbar->addAction("Сохранить");
-    connect(saveAct, &QAction::triggered, this, &MainWindow::onSave);
-    QAction *settingsAct = toolbar->addAction("Настройки");
-    connect(settingsAct, &QAction::triggered, this, &MainWindow::onSettings);
+    toolbar->addAction("Добавить", this, &MainWindow::onAddGame);
+    toolbar->addAction("Сохранить", this, &MainWindow::onSave);
 }
 
 void MainWindow::setupStatusBar()
@@ -184,58 +191,72 @@ void MainWindow::onAddGame()
     newGame.players = m_playersSpin->value();
     newGame.timeMinutes = m_timeSpin->value();
     newGame.difficulty = m_difficultyCombo->currentText();
-    newGame.description = m_descriptionEdit->toPlainText();
 
     m_games.append(newGame);
     updateGameList();
-    onClearForm();
 
-    logMsg("[LOG] Игра добавлена: " + newGame.title);
-    statusBar()->showMessage("Игра успешно добавлена", 3000);
-}
-
-void MainWindow::onDelete()
-{
-    int currentRow = m_gameList->currentRow();
-
-    if (currentRow < 0 || currentRow >= m_games.size()) {
-        QMessageBox::warning(this, "Ошибка", "Выберите игру из списка для удаления.");
-        return;
-    }
-
-    auto reply = QMessageBox::question(this, "Удаление",
-                                       "Вы уверены, что хотите удалить игру \"" + m_games[currentRow].title + "\"?",
-                                       QMessageBox::Yes | QMessageBox::No);
-
-    if (reply == QMessageBox::Yes) {
-        logMsg("[LOG] Игра удалена: " + m_games[currentRow].title);
-        m_games.removeAt(currentRow);
-        updateGameList();
-        statusBar()->showMessage("Игра удалена", 3000);
-    }
-}
-
-void MainWindow::updateGameList()
-{
-    m_gameList->clear();
-    for (const Game &g : m_games) {
-        QString text = QString("%1 | %2 игроков | %3 мин | %4")
-                           .arg(g.title)
-                           .arg(g.players)
-                           .arg(g.timeMinutes)
-                           .arg(g.difficulty);
-        m_gameList->addItem(text);
-    }
-}
-
-void MainWindow::onClearForm()
-{
+    // Очищаем форму после добавления (без очистки списка!)
     m_titleEdit->clear();
     m_playersSpin->setValue(2);
     m_timeSpin->setValue(60);
     m_difficultyCombo->setCurrentIndex(0);
     m_descriptionEdit->clear();
-    logMsg("[LOG] Форма очищена");
+
+    logMsg("[CRUD] Игра добавлена: " + newGame.title);
+}
+
+void MainWindow::onDelete()
+{
+    QModelIndex current = m_gameList->currentIndex();
+
+    if (!current.isValid()) {
+        QMessageBox::warning(this, "Ошибка", "Выберите игру для удаления.");
+        return;
+    }
+
+    int row = current.row();
+    auto reply = QMessageBox::question(this, "Удаление",
+                                       "Удалить игру \"" + m_games[row].title + "\"?",
+                                       QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        logMsg("[CRUD] Игра удалена: " + m_games[row].title);
+        m_games.removeAt(row);
+        updateGameList();
+    }
+}
+
+void MainWindow::onClearForm()
+{
+    if (m_games.isEmpty()) {
+        QMessageBox::information(this, "Пусто", "Список уже пуст.");
+        return;
+    }
+
+    auto reply = QMessageBox::question(this, "Очистка",
+                                       "Вы уверены, что хотите очистить ВЕСЬ список игр?",
+                                       QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        m_games.clear();
+        updateGameList();
+        logMsg("[CRUD] Список игр очищен полностью");
+    }
+}
+
+void MainWindow::updateGameList()
+{
+    QStringList list;
+    for (const Game &g : m_games) {
+        QString item = QString("%1  |  %2 игроков  |  %3 мин  |  %4")
+                           .arg(g.title)
+                           .arg(g.players)
+                           .arg(g.timeMinutes)
+                           .arg(g.difficulty);
+        list << item;
+    }
+    // Передаем данные в модель, View обновится сам
+    m_gameModel->setStringList(list);
 }
 
 void MainWindow::onAutosave()
@@ -247,14 +268,13 @@ void MainWindow::onAutosave()
 
 void MainWindow::onSave()
 {
-    logMsg("[LOG] Ручное сохранение. Всего игр: " + QString::number(m_games.size()));
+    logMsg("[LOG] Сохранение. Всего игр: " + QString::number(m_games.size()));
     statusBar()->showMessage("Сохранено (в памяти)", 3000);
 }
 
 void MainWindow::onSettings()
 {
-    logMsg("[LOG] Открытие настроек");
-    QMessageBox::information(this, "Настройки", "Настройки будут добавлены позже.");
+    QMessageBox::information(this, "Настройки", "Настройки будут позже.");
 }
 
 void MainWindow::onExit()
